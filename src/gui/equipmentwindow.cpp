@@ -66,6 +66,26 @@ static const int boxPosition[][2] = {
     {129, 78}    // EQUIP_AMMO_SLOT
 };
 
+// Types of equipment that can go in each slot.
+// Fight slots use filterTypeForFightSlots instead.
+static const std::string filterType[] = {
+    "equip-legs",   // EQUIP_LEGS_SLOT
+    "",             // EQUIP_FIGHT1_SLOT
+    "equip-arms",   // EQUIP_GLOVES_SLOT
+    "equip-ring",   // EQUIP_RING2_SLOT
+    "equip-ring",   // EQUIP_RING1_SLOT
+    "",             // EQUIP_FIGHT2_SLOT
+    "equip-feet",   // EQUIP_FEET_SLOT
+    "equip-cape",   // EQUIP_CAPE_SLOT    TODO is this definition right?
+    "equip-head",   // EQUIP_HEAD_SLOT
+    "equip-torso",  // EQUIP_TORSO_SLOT
+    "equip-ammo"    // EQUIP_AMMO_SLOT
+};
+
+// EQUIP_FIGHT1_SLOT and EQUIP_FIGHT2_SLOT can take several types of item.
+static std::list<std::string> filterTypeForFightSlot1;
+static std::list<std::string> filterTypeForFightSlot2;
+
 class EquipmentConfigListener : public ConfigListener
 {
     public:
@@ -100,18 +120,24 @@ EquipmentWindow::EquipmentWindow():
 
     setWindowName("Equipment");
     setCloseButton(true);
-    setDefaultSize(180, 300, ImageRect::CENTER);
+    setDefaultSize(280, 300, ImageRect::CENTER);
     loadWindowState();
 
     const gcn::Rectangle &area = getChildrenArea();
 
     mUnequip = new Button(_("Unequip"), "unequip", this);
-    mUnequip->setPosition(area.width  - mUnequip->getWidth() - 5,
+    mUnequip->setPosition(5,
                           area.height - mUnequip->getHeight() - 5);
     mUnequip->setEnabled(false);
 
+    mEquipButton = new Button(_("Equip"), "equip", this);
+    mEquipButton->setPosition(area.width  - mEquipButton->getWidth() - 5,
+                          area.height - mEquipButton->getHeight() - 5);
+    mEquipButton->setEnabled(false);
+
     add(mPlayerBox);
     add(mUnequip);
+    add(mEquipButton);
 
     for (int i = EQUIP_LEGS_SLOT; i < EQUIP_VECTOREND; i++)
     {
@@ -125,6 +151,28 @@ EquipmentWindow::EquipmentWindow():
 
     mEquipment = player_node->mEquipment.get();
     mInventory = player_node->getInventory();
+
+    if (filterTypeForFightSlot1.empty())
+    {
+        filterTypeForFightSlot1.push_back("equip-1hand");
+        filterTypeForFightSlot1.push_back("equip-2hand");
+        filterTypeForFightSlot2.push_back("equip-2hand");
+        filterTypeForFightSlot2.push_back("equip-shield");
+    }
+
+    mItems = new ItemContainer(player_node->getInventory(), "showpopupmenu", this);
+    mItems->setTypeFilter("show no items"); //arbitary string
+    mItems->addSelectionListener(this);
+
+    mInvenScroll = new ScrollArea(mItems);
+    mInvenScroll->setHorizontalScrollPolicy(gcn::ScrollArea::SHOW_NEVER);
+
+    //FIXME proper locations
+    mInvenScroll->setX(175);
+    mInvenScroll->setY(20);
+    mInvenScroll->setWidth(90);
+    mInvenScroll->setHeight(200);
+    add(mInvenScroll);
 }
 
 EquipmentWindow::~EquipmentWindow()
@@ -200,6 +248,15 @@ void EquipmentWindow::action(const gcn::ActionEvent &event)
         player_node->unequipItem(item);
         setSelected(-1);
     }
+    else if (event.getId() == "equip")
+    {
+        Item* item = mItems->getSelectedItem();
+        if (item)
+        {
+            player_node->equipItem(item);
+            setSelected(-1);
+        }
+    }
 }
 
 Item* EquipmentWindow::getItem(const int &x, const int &y)
@@ -226,22 +283,35 @@ void EquipmentWindow::mousePressed(gcn::MouseEvent& mouseEvent)
     const int x = mouseEvent.getX();
     const int y = mouseEvent.getY();
 
-    Item* item = getItem(x, y);
-
-    if (!item)
-        return;
-
     if (mouseEvent.getButton() == gcn::MouseEvent::LEFT)
     {
         // Checks if any of the presses were in the equip boxes.
         for (int i = EQUIP_LEGS_SLOT; i < EQUIP_VECTOREND; i++)
         {            
             if (mouseEvent.getSource() == mEquipIcon[i])
+            {
                 setSelected(i);
+                if (i == EQUIP_FIGHT1_SLOT)
+                {
+                    mItems->setTypeFilter(filterTypeForFightSlot1);
+                }
+                else if (i == EQUIP_FIGHT2_SLOT)
+                {
+                    mItems->setTypeFilter(filterTypeForFightSlot2);
+                }
+                else
+                {
+                    mItems->setTypeFilter(filterType[i]);
+                }
+            }
         }
     }
     else if (mouseEvent.getButton() == gcn::MouseEvent::RIGHT)
     {
+        Item* item = getItem(x, y);
+        if (!item)
+            return;
+
         /* Convert relative to the window coordinates to absolute screen
          * coordinates.
          */
@@ -289,5 +359,22 @@ void EquipmentWindow::mouseExited(gcn::MouseEvent &event)
 void EquipmentWindow::setSelected(int index)
 {
     mSelected = index;
-    mUnequip->setEnabled(mSelected != -1);
+    switch (mSelected)
+    {
+        case -1:    // no slot selected
+            mUnequip->setEnabled(false);
+            break;
+        case EQUIP_AMMO_SLOT:
+            mUnequip->setEnabled(-1 != mEquipment->getArrows());
+            break;
+        default:
+            mUnequip->setEnabled(-1 != mEquipment->getEquipment(mSelected));
+    }
 }
+
+void EquipmentWindow::valueChanged(const gcn::SelectionEvent &event)
+{
+    if (event.getSource() == mItems)
+        mEquipButton->setEnabled(NULL != mItems->getSelectedItem());
+}
+

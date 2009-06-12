@@ -24,8 +24,11 @@
 #define EQUIPMENT_WINDOW_H
 
 #include <guichan/actionlistener.hpp>
+#include <guichan/selectionlistener.hpp>
 
 #include "../bindings/guichan/widgets/window.h"
+#include "../bindings/guichan/widgets/itemcontainer.h"
+#include "../bindings/guichan/widgets/scrollarea.h"
 
 class Equipment;
 class EquipmentConfigListener;
@@ -40,7 +43,9 @@ class PlayerBox;
  *
  * \ingroup Interface
  */
-class EquipmentWindow : public Window, public gcn::ActionListener
+class EquipmentWindow : public Window,
+                        public gcn::ActionListener,
+                        public gcn::SelectionListener
 {
     public:
         friend class EquipmentConfigListener;
@@ -89,19 +94,25 @@ class EquipmentWindow : public Window, public gcn::ActionListener
 
         void setSelected(int index);
 
+        void valueChanged(const gcn::SelectionEvent &event);
+
         bool mShowItemInfo;
         EquipmentConfigListener *mConfigListener;
 
         Equipment *mEquipment;
         Inventory *mInventory;
         gcn::Button *mUnequip;                  /**< Button for unequipping. */
+        gcn::Button *mEquipButton;              /**< Button for equipping. */
         Icon *mEquipIcon[EQUIP_VECTOREND];      /**< Equipment Icons. */
 
         ItemPopup *mItemPopup;
 
         PlayerBox *mPlayerBox;
 
-        int mSelected;                          /**< Index of selected item. */
+        int mSelected;                          /**< Index of selected slot (the slot may be empty). */
+
+        ItemContainer *mItems;                  /**< Equippable items */
+        gcn::ScrollArea *mInvenScroll;
 };
 
 extern EquipmentWindow *equipmentWindow;
