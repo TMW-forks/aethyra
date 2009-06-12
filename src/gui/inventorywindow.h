@@ -98,6 +98,7 @@ class InventoryWindow : public Window, gcn::ActionListener,
         int mMaxWeight;
         gcn::Button *mShortcutButton;
         gcn::Button *mStoreButton, *mUseButton, *mDropButton;
+        gcn::Button *mFilterButton;
         gcn::ScrollArea *mInvenScroll;
 
         gcn::Label *mWeightLabel;
@@ -109,6 +110,8 @@ class InventoryWindow : public Window, gcn::ActionListener,
         int mMaxSlots;
 
         bool mItemDesc;
+
+        int mFilterState;
 };
 
 extern InventoryWindow *inventoryWindow;

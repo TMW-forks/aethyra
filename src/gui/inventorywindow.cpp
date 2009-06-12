@@ -114,12 +114,18 @@ InventoryWindow::InventoryWindow(int invSize):
     place(7, 5, mDropButton);
     place(8, 5, mUseButton);
 
+    mFilterButton = new Button(_("Filter:_______________"), "filter", this);
+    mFilterButton->setEnabled(true);
+    place(5, 5, mFilterButton);
+
     Layout &layout = getLayout();
     layout.setRowHeight(0, mDropButton->getHeight());
 
     loadWindowState();
 
     mStoreButton->setVisible(false);
+
+    mItems->setTypeFilter("");
 }
 
 void InventoryWindow::logic()
@@ -159,6 +165,27 @@ void InventoryWindow::action(const gcn::ActionEvent &event)
     {
         itemShortcutWindow->setVisible(!itemShortcutWindow->isVisible());
         return;
+    }
+    else if (event.getId() == "filter")
+    {
+        static const std::string filters[] = {"", "generic", "usable", "equip-head", "equip-1hand", "equip-torso", "equip-feet"};
+        mFilterState++;
+        if (mFilterState == 8)
+            mFilterState = 0;
+        if (mFilterState == 7)
+        {
+            mFilterButton->setCaption("Multi filter");
+            std::list<std::string> filterList;
+            filterList.push_back("equip-1hand");
+            filterList.push_back("equip-2hand");
+            filterList.push_back("equip-shield");
+            mItems->setTypeFilter(filterList);
+        }
+        else
+        {
+            mFilterButton->setCaption("Filter: " + filters[mFilterState]);
+            mItems->setTypeFilter(filters[mFilterState]);
+        }
     }
 
     Item *item = mItems->getSelectedItem();
